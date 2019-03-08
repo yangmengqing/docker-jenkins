@@ -1,0 +1,33 @@
+# Dockerfile for jenkins with docker cli, docker-compose and ansible installed
+FROM jenkins/jenkins:lts
+
+# Install required pkg
+RUN apt-get update -y && \
+    apt-get install apt-transport-https ca-certificates gnupg-agent software-properties-common \
+    curl python-dev python-setuptools gcc make libssl-dev -y && \
+    easy_install pip
+
+# Install docker cli
+RUN curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg > /tmp/dkey; apt-key add /tmp/dkey && \
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable" && \
+    apt-get update -y && \
+    apt-get -y install docker-ce
+
+# Install docker-compose and ansible
+RUN pip install docker-compose && \
+    pip install ansible 
+
+# Install plugins
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN /usr/local/bin/install-plugins.sh < /usr/share/jenkins/ref/plugins.txt
+
+#Jenkins initial admin user
+ENV JENKINS_USER admin
+ENV JENKINS_PASS admin
+
+# Setup without default initial steps
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
+
+COPY default-user.groovy /usr/share/jenkins/ref/init.groovy.d/
+
+
